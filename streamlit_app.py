@@ -22,13 +22,11 @@ class AutocompleteSystem:
     def search(self, prefix):
         results = []
         current_node = self.root
-        # Traverse the trie to the node corresponding to the prefix
         for char in prefix:
             if char in current_node.children:
                 current_node = current_node.children[char]
             else:
                 return results
-        # Collect all words starting with the given prefix
         self._collect_words(current_node, list(prefix), results)
         return results
 
@@ -62,47 +60,39 @@ class AutocompleteSystem:
         self.root = TrieNode()
         self.word_list = set()
 
-# Function to handle Streamlit interface and interaction
 def main():
     st.title("Bito exercise - Autocompletion")
 
-    # Initialize the autocomplete system in session state if not already done
     if 'autocomplete' not in st.session_state:
         st.session_state.autocomplete = AutocompleteSystem()
-        # Initial words to populate the autocomplete system
         initial_words = ["apple", "app", "application", "banana", "bat", "ball", "cat", "dog", "elephant"]
         for word in initial_words:
             st.session_state.autocomplete.insert(word)
 
     autocomplete = st.session_state.autocomplete
 
-    # Display all words in dictionary
-    # st.header("All Words in Dictionary")
+    st.write("Current words in autocomplete system:", autocomplete.display())
+
     words_container = st.empty()
     words_container.write(", ".join(autocomplete.display()))
 
-    # Text input and button for adding new words
     new_word = st.text_input("Enter a new word to add:", "")
     if st.button("Add Word") and new_word:
         autocomplete.update(new_word)
         st.success(f"Added '{new_word}' to the dictionary.")
-        # Update displayed words after adding new word
         words_container.empty()
         words_container.write(", ".join(autocomplete.display()))
-
 
     prefix = st.text_input("Enter prefix to search:")
     results = autocomplete.search(prefix)
     next_letters = autocomplete.get_next_letters(prefix)
+
     if next_letters:
         st.text(f"Next possible letters: {', '.join(next_letters)}")
-
     if results:
         st.header(f"{', '.join(results)}")
     elif prefix:
         st.warning(f"No words found starting with '{prefix}'.")
-
-    
 
 if __name__ == "__main__":
     main()
