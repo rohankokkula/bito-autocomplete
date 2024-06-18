@@ -1,40 +1,108 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
 
-"""
-# Welcome to Streamlit!
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end_of_word = False
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+class AutocompleteSystem:
+    def __init__(self):
+        self.root = TrieNode()
+        self.word_list = set()  # This will store all words for fast lookup
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+    def insert(self, word):
+        current_node = self.root
+        for char in word:
+            if char not in current_node.children:
+                current_node.children[char] = TrieNode()
+            current_node = current_node.children[char]
+        current_node.is_end_of_word = True
+        self.word_list.add(word)
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+    def search(self, prefix):
+        results = []
+        current_node = self.root
+        # Traverse the trie to the node corresponding to the prefix
+        for char in prefix:
+            if char in current_node.children:
+                current_node = current_node.children[char]
+            else:
+                return results
+        # Collect all words starting with the given prefix
+        self._collect_words(current_node, list(prefix), results)
+        return results
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+    def get_next_letters(self, prefix):
+        current_node = self.root
+        for char in prefix:
+            if char in current_node.children:
+                current_node = current_node.children[char]
+            else:
+                return []
+        return list(current_node.children.keys())
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+    def _collect_words(self, node, prefix, results):
+        if node.is_end_of_word:
+            results.append(''.join(prefix))
+        for char in node.children:
+            prefix.append(char)
+            self._collect_words(node.children[char], prefix, results)
+            prefix.pop()
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
+    def update(self, word):
+        if word not in self.word_list:
+            self.insert(word)
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+    def display(self):
+        words = []
+        self._collect_words(self.root, [], words)
+        return words
+
+    def clear(self):
+        self.root = TrieNode()
+        self.word_list = set()
+
+# Function to handle Streamlit interface and interaction
+def main():
+    st.title("Bito exercise - Autocompletion")
+
+    # Initialize the autocomplete system in session state if not already done
+    if 'autocomplete' not in st.session_state:
+        st.session_state.autocomplete = AutocompleteSystem()
+        # Initial words to populate the autocomplete system
+        initial_words = ["apple", "app", "application", "banana", "bat", "ball", "cat", "dog", "elephant"]
+        for word in initial_words:
+            st.session_state.autocomplete.insert(word)
+
+    autocomplete = st.session_state.autocomplete
+
+    # Display all words in dictionary
+    # st.header("All Words in Dictionary")
+    words_container = st.empty()
+    words_container.write(", ".join(autocomplete.display()))
+
+    # Text input and button for adding new words
+    new_word = st.text_input("Enter a new word to add:", "")
+    if st.button("Add Word") and new_word:
+        autocomplete.update(new_word)
+        st.success(f"Added '{new_word}' to the dictionary.")
+        # Update displayed words after adding new word
+        words_container.empty()
+        words_container.write(", ".join(autocomplete.display()))
+
+
+    prefix = st.text_input("Enter prefix to search:")
+    results = autocomplete.search(prefix)
+    next_letters = autocomplete.get_next_letters(prefix)
+    if next_letters:
+        st.text(f"Next possible letters: {', '.join(next_letters)}")
+
+    if results:
+        st.header(f"{', '.join(results)}")
+    elif prefix:
+        st.warning(f"No words found starting with '{prefix}'.")
+
+    
+
+if __name__ == "__main__":
+    main()
