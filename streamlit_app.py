@@ -70,9 +70,6 @@ def main():
             st.session_state.autocomplete.insert(word)
 
     autocomplete = st.session_state.autocomplete
-
-    st.write("Current words in autocomplete system:", autocomplete.display())
-
     words_container = st.empty()
     words_container.write(", ".join(autocomplete.display()))
 
